@@ -55,14 +55,7 @@ export const Subscription = () => {
         <section className="bg-white rounded-lg shadow mb-6">
           <div className="px-4 py-5 sm:px-6">
             <div className="flex items-center">
-              <Link 
-                to="/settings" 
-                className="flex items-center text-gray-600 hover:text-blue-600 mb-4"
-              >
-                <ArrowLeft className="h-5 w-5 mr-1" />
-                Back
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900 ml-4">Subscription</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
             </div>
           </div>
           

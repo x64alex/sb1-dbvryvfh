@@ -81,11 +81,11 @@ export const Login: React.FC = () => {
                 setStep('verify');
                 setResendTimer(60);
             } else {
-                await verifyLogin({
+                const response = await verifyLogin({
                     phoneNumber: formData.phoneNumber,
                     code: formData.code
                 });
-                toast.success('Login successful!');
+                // The handleAuthSuccess in useAuth will handle the navigation and state updates
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'An error occurred');
