@@ -252,17 +252,41 @@ app.post('/api/verify-login', async (req, res) => {
     }
 });
 
-// Protected route example
-app.get('/api/protected', authenticateToken, (req, res) => {
+// Subscription endpoint
+app.get('/api/subscription', authenticateToken, (req, res) => {
     const user = users.get(req.user.phoneNumber);
-    res.json({ 
-        message: 'You have access to this protected route',
-        user: {
-            phoneNumber: user.phoneNumber,
-            email: user.email
+    
+    // Mock subscription data (in a real app, this would come from a database)
+    const subscription = {
+        is_active: true,
+        category: 'Premium',
+        next_renewal: {
+            unixtime: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now
+        },
+        subscription: {
+            sku: {
+                category: 'Premium',
+                variation: 'monthly'
+            }
         }
+    };
+
+    const userFeatures = {
+        unmasking: true,
+        blacklist: true,
+        missed_call_alerts: true,
+        cnam: true,
+        transcriptions: true,
+        recording: false
+    };
+
+    res.json({
+        subscription,
+        userFeatures,
+        price: '99.99'
     });
 });
+
 
 // Middleware to authenticate JWT token
 function authenticateToken(req, res, next) {

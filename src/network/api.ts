@@ -38,6 +38,31 @@ export interface ResendCodeResponse {
     remainingTime?: number;
 }
 
+export interface SubscriptionResponse {
+    subscription: {
+        is_active: boolean;
+        category: string;
+        next_renewal: {
+            unixtime: number;
+        };
+        subscription: {
+            sku: {
+                category: string;
+                variation: string;
+            };
+        };
+    };
+    userFeatures: {
+        unmasking: boolean;
+        blacklist: boolean;
+        missed_call_alerts: boolean;
+        cnam: boolean;
+        transcriptions: boolean;
+        recording: boolean;
+    };
+    price: string;
+}
+
 export const authApi = {
     signup: async (data: SignupRequest): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/signup', data);
@@ -61,6 +86,13 @@ export const authApi = {
 
     resendCode: async (data: ResendCodeRequest): Promise<ResendCodeResponse> => {
         const response = await api.post<ResendCodeResponse>('/resend-code', data);
+        return response.data;
+    },
+};
+
+export const subscriptionApi = {
+    getSubscription: async (): Promise<SubscriptionResponse> => {
+        const response = await api.get<SubscriptionResponse>('/subscription');
         return response.data;
     },
 };
