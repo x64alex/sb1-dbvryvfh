@@ -1,13 +1,32 @@
-export interface LoginRequest {
-  phone: string;
-}
-
-export interface SignUpRequest {
-  phone: string;
-  pin: string;
+export interface SignupRequest {
   email: string;
+  phoneNumber: string;
 }
 
+export interface VerifyCodeRequest {
+  phoneNumber: string;
+  code: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  token?: string;
+  user?: {
+    phoneNumber: string;
+    email: string;
+  };
+}
+
+export interface ResendCodeRequest {
+  phoneNumber: string;
+  type: 'signup' | 'login';
+}
+
+export interface ResendCodeResponse {
+  message: string;
+  phoneNumber: string;
+  remainingTime?: number;
+}
 
 export interface ApiError {
   message: string;
@@ -17,13 +36,4 @@ export interface ApiError {
 export interface ApiResponse<T> {
   data: T;
   success: boolean;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: {
-    id: string;
-    phone: string;
-    email: string;
-  };
 }

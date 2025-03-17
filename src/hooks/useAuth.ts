@@ -3,113 +3,169 @@ import { useNavigate } from 'react-router-dom';
 import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse, subscriptionApi } from '../network/api';
 
 interface AuthState {
-    isAuthenticated: boolean;
-    user: {
-        phoneNumber: string;
-        email: string;
-    } | null;
-    token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: {
+    phoneNumber: string;
+    email: string;
+  } | null;
+  token: string | null;
 }
 
 export const useAuth = () => {
-    const navigate = useNavigate();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState<AuthState['user']>(null);
-    const [token, setToken] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const [state, setState] = useState<AuthState>({
+    isAuthenticated: false,
+    isLoading: true,
+    user: null,
+    token: null
+  });
 
-    const checkSubscription = async () => {
-        try {
-            const subscription = await subscriptionApi.getSubscription();
-            return subscription.subscription.is_active;
-        } catch (error) {
-            console.error('Error checking subscription:', error);
-            return false;
+  const checkSubscriptionStatus = async () => {
+    try {
+      const subscription = await subscriptionApi.getSubscription();
+      
+      // Check if user has any subscription history
+      const hasSubscriptionHistory = subscription?.subscription?.subscription?.sku?.category && 
+        subscription.subscription.subscription.sku.category !== 'Basic';
+
+      return {
+        isActive: subscription?.subscription?.is_active || false,
+        hasHistory: hasSubscriptionHistory
+      };
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      return {
+        isActive: false,
+        hasHistory: false
+      };
+    }
+  };
+
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedToken && storedUser) {
+        setAuthToken(storedToken);
+        const { isActive, hasHistory } = await checkSubscriptionStatus();
+        
+        setState({
+          isAuthenticated: true,
+          isLoading: false,
+          token: storedToken,
+          user: JSON.parse(storedUser)
+        });
+        
+        // Only redirect if we're on the login, signup, or activation pages
+        const isAuthPage = ['/login', '/signup', '/activate'].includes(window.location.pathname);
+        if (isAuthPage) {
+          if (isActive) {
+            navigate('/settings/subscription');
+          } else if (hasHistory) {
+            navigate('/settings/reactivate');
+          } else {
+            navigate('/activate');
+          }
         }
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
     };
 
-    // Initialize auth state from localStorage
-    useEffect(() => {
-        const initializeAuth = async () => {
-            const storedToken = localStorage.getItem('token');
-            const storedUser = localStorage.getItem('user');
-            
-            if (storedToken && storedUser) {
-                setAuthToken(storedToken);
-                const hasActiveSubscription = await checkSubscription();
-                
-                setToken(storedToken);
-                setUser(JSON.parse(storedUser));
-                setIsAuthenticated(true);
-                
-                // Only redirect if we're on the login or signup pages
-                const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/signup';
-                if (isAuthPage) {
-                    navigate(hasActiveSubscription ? '/settings/subscription' : '/activate');
-                }
-            }
-            setIsLoading(false);
-        };
+    initializeAuth();
+  }, [navigate]);
 
-        initializeAuth();
-    }, [navigate]);
+  const handleAuthSuccess = useCallback(async (response: AuthResponse) => {
+    if (response.token && response.user) {
+      const newState = {
+        isAuthenticated: true,
+        isLoading: false,
+        token: response.token,
+        user: response.user
+      };
+      
+      setState(newState);
+      setAuthToken(response.token);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Check subscription status after successful auth
+      const { isActive, hasHistory } = await checkSubscriptionStatus();
+      
+      if (isActive) {
+        navigate('/settings/subscription');
+      } else if (hasHistory) {
+        navigate('/settings/reactivate');
+      } else {
+        navigate('/activate');
+      }
+    }
+  }, [navigate]);
 
-    const handleAuthSuccess = useCallback(async (response: AuthResponse) => {
-        if (response.token && response.user) {
-            setToken(response.token);
-            setUser(response.user);
-            setIsAuthenticated(true);
-            setAuthToken(response.token);
-            localStorage.setItem('token', response.token);
-            localStorage.setItem('user', JSON.stringify(response.user));
-            
-            // Check subscription status after successful auth
-            const hasActiveSubscription = await checkSubscription();
-            navigate(hasActiveSubscription ? '/settings/subscription' : '/activate');
-        }
-    }, [navigate]);
+  const signup = useCallback(async (data: SignupRequest) => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await authApi.signup(data);
+      return response;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []);
 
-    const signup = useCallback(async (data: SignupRequest) => {
-        const response = await authApi.signup(data);
-        return response;
-    }, []);
+  const verifySignup = useCallback(async (data: VerifyCodeRequest) => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await authApi.verifySignup(data);
+      await handleAuthSuccess(response);
+      return response;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [handleAuthSuccess]);
 
-    const verifySignup = useCallback(async (data: VerifyCodeRequest) => {
-        const response = await authApi.verifySignup(data);
-        handleAuthSuccess(response);
-        return response;
-    }, [handleAuthSuccess]);
+  const login = useCallback(async (phoneNumber: string) => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await authApi.login(phoneNumber);
+      return response;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []);
 
-    const login = useCallback(async (phoneNumber: string) => {
-        const response = await authApi.login(phoneNumber);
-        return response;
-    }, []);
+  const verifyLogin = useCallback(async (data: VerifyCodeRequest) => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await authApi.verifyLogin(data);
+      await handleAuthSuccess(response);
+      return response;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [handleAuthSuccess]);
 
-    const verifyLogin = useCallback(async (data: VerifyCodeRequest) => {
-        const response = await authApi.verifyLogin(data);
-        handleAuthSuccess(response);
-        return response;
-    }, [handleAuthSuccess]);
+  const logout = useCallback(() => {
+    setState({
+      isAuthenticated: false,
+      isLoading: false,
+      token: null,
+      user: null
+    });
+    clearAuthToken();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  }, [navigate]);
 
-    const logout = useCallback(() => {
-        setToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        clearAuthToken();
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-    }, [navigate]);
-
-    return {
-        isAuthenticated,
-        user,
-        token,
-        isLoading,
-        signup,
-        verifySignup,
-        login,
-        verifyLogin,
-        logout,
-    };
+  return {
+    ...state,
+    signup,
+    verifySignup,
+    login,
+    verifyLogin,
+    logout
+  };
 };

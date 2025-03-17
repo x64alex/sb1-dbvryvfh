@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Check, ArrowLeft, Shield } from 'lucide-react';
-import { subscriptionApi } from '../network/api';
+import { useNavigate } from 'react-router-dom';
+import { Shield, Check } from 'lucide-react';
+import { subscriptionApi } from '../../network/api';
 import { toast } from 'react-hot-toast';
 
 interface Plan {
@@ -49,11 +49,11 @@ const plans: Plan[] = [
   }
 ];
 
-export const ActivationPage = () => {
+export const ReactivatePage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
+  const [previousPlan, setPreviousPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -61,20 +61,20 @@ export const ActivationPage = () => {
       try {
         const subscription = await subscriptionApi.getSubscription();
         
-        // If subscription exists and is active, redirect to subscription page
+        // If subscription is active, redirect to subscription page
         if (subscription?.subscription?.is_active) {
           navigate('/settings/subscription');
           return;
         }
 
         // Check if user had a previous subscription
-        const hadPreviousSubscription = subscription?.subscription?.category && 
-          (subscription.subscription.category !== 'Basic' || 
-          (subscription.subscription.category === 'Basic' && !subscription.subscription.is_active));
-
-        // If user had a previous subscription, redirect to reactivate page
-        if (hadPreviousSubscription) {
-          navigate('/settings/reactivate');
+        const category = subscription?.subscription?.subscription?.sku?.category?.toLowerCase();
+        if (category) {
+          setPreviousPlan(category);
+          setSelectedPlan(category);
+        } else {
+          // If no previous subscription, redirect to activation page
+          navigate('/activate');
           return;
         }
       } catch (error) {
@@ -92,8 +92,7 @@ export const ActivationPage = () => {
     const plan = plans.find(p => p.id === selectedPlan);
     if (!plan) return;
 
-    // For demo, just show a success message and redirect
-    toast.success(`Successfully activated ${plan.name} Plan`);
+    toast.success(`Successfully reactivated ${plan.name} Plan`);
     navigate('/settings/subscription');
   };
 
@@ -118,21 +117,24 @@ export const ActivationPage = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         {/* Header */}
-        <div className="flex items-center mb-8">
-          <Link to="/" className="text-gray-500 hover:text-gray-700 mr-4">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+        <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Select your subscription
+            Reactivate your subscription
           </h1>
         </div>
 
-        {/* Welcome Message */}
+        {/* Welcome Back Message */}
         <div className="text-center mb-12">
-          <p className="text-lg text-gray-600 mb-8">
-            Compare our plans below to select the subscription<br />
-            that's right for you. <span className="font-semibold text-green-600">Start with 7 days FREE</span>.
-          </p>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 inline-flex items-center gap-4">
+            <Shield className="h-8 w-8 text-blue-600" />
+            <div className="text-left">
+              <h2 className="font-semibold text-gray-900">Welcome back!</h2>
+              <p className="text-gray-600">
+                Your previous plan was <span className="font-medium">{previousPlan?.toUpperCase()}</span>.
+                Choose a plan below to reactivate your service.
+              </p>
+            </div>
+          </div>
 
           {/* Billing Cycle Toggle */}
           <div className="inline-flex items-center bg-gray-100 p-1 rounded-full">
@@ -167,6 +169,7 @@ export const ActivationPage = () => {
           {plans.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
             const isSelected = selectedPlan === plan.id;
+            const isPreviousPlan = previousPlan === plan.id;
 
             return (
               <div
@@ -181,8 +184,13 @@ export const ActivationPage = () => {
                   </div>
                 )}
                 <div className="p-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-5">
+                  <h3 className="text-xl font-bold text-gray-900 mb-5 flex items-center justify-between">
                     {plan.name}
+                    {isPreviousPlan && (
+                      <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        Previous Plan
+                      </span>
+                    )}
                   </h3>
                   <div className="mb-5">
                     <div className="flex items-baseline">
@@ -237,11 +245,8 @@ export const ActivationPage = () => {
             onClick={handleContinue}
             className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 transition-colors"
           >
-            Start Free Trial with {plans.find(p => p.id === selectedPlan)?.name}
+            Reactivate {plans.find(p => p.id === selectedPlan)?.name} Plan
           </button>
-          <p className="mt-4 text-sm text-gray-500">
-            Your 7-day free trial starts today. Cancel anytime.
-          </p>
         </div>
       </div>
     </div>
