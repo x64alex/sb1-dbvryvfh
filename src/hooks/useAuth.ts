@@ -16,6 +16,7 @@ export const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState<AuthState['user']>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Initialize auth state from localStorage
     useEffect(() => {
@@ -28,6 +29,7 @@ export const useAuth = () => {
             setIsAuthenticated(true);
             setAuthToken(storedToken);
         }
+        setIsLoading(false);
     }, []);
 
     const handleAuthSuccess = useCallback((response: AuthResponse) => {
@@ -38,7 +40,7 @@ export const useAuth = () => {
             setAuthToken(response.token);
             localStorage.setItem('token', response.token);
             localStorage.setItem('user', JSON.stringify(response.user));
-            navigate('/');
+            navigate('/settings/subscription');
         }
     }, [navigate]);
 
@@ -50,6 +52,7 @@ export const useAuth = () => {
     const verifySignup = useCallback(async (data: VerifyCodeRequest) => {
         const response = await authApi.verifySignup(data);
         handleAuthSuccess(response);
+        return response;
     }, [handleAuthSuccess]);
 
     const login = useCallback(async (phoneNumber: string) => {
@@ -60,6 +63,7 @@ export const useAuth = () => {
     const verifyLogin = useCallback(async (data: VerifyCodeRequest) => {
         const response = await authApi.verifyLogin(data);
         handleAuthSuccess(response);
+        return response;
     }, [handleAuthSuccess]);
 
     const logout = useCallback(() => {
@@ -76,6 +80,7 @@ export const useAuth = () => {
         isAuthenticated,
         user,
         token,
+        isLoading,
         signup,
         verifySignup,
         login,

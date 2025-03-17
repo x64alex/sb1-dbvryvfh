@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Settings } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export function Header() {
   const [showButton, setShowButton] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, logout } = useAuth();
   const isLoginPage = location.pathname === '/login';
 
   useEffect(() => {
@@ -20,6 +22,11 @@ export function Header() {
       return () => window.removeEventListener('scroll', handleScroll);
     }
   }, [isLoginPage]);
+
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
+  };
 
   return (
     <nav className="fixed w-full bg-white/80 backdrop-blur-sm z-50 border-b mt-8">
@@ -40,7 +47,23 @@ export function Header() {
             <a href="https://support.trapcall.com/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-600">
               Support
             </a>
-            {!isLoginPage && (
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/settings/subscription"
+                  className="text-gray-600 hover:text-blue-600 flex items-center"
+                >
+                  <Settings className="h-5 w-5 mr-1" />
+                  Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-blue-600"
+                >
+                  Log Out
+                </button>
+              </>
+            ) : (
               <>
                 <Link
                   to="/login"
@@ -88,7 +111,24 @@ export function Header() {
             >
               Support
             </a>
-            {!isLoginPage && (
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/settings/subscription"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 flex items-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Settings className="h-5 w-5 mr-2" />
+                  Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                >
+                  Log Out
+                </button>
+              </>
+            ) : (
               <>
                 <Link
                   to="/login"
