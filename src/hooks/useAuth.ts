@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse } from '../network/api';
+import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse, subscriptionApi } from '../network/api';
 
 interface AuthState {
     isAuthenticated: boolean;
@@ -18,21 +18,43 @@ export const useAuth = () => {
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const checkSubscription = async () => {
+        try {
+            const subscription = await subscriptionApi.getSubscription();
+            return subscription.subscription.is_active;
+        } catch (error) {
+            console.error('Error checking subscription:', error);
+            return false;
+        }
+    };
+
     // Initialize auth state from localStorage
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        
-        if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-            setIsAuthenticated(true);
-            setAuthToken(storedToken);
-        }
-        setIsLoading(false);
-    }, []);
+        const initializeAuth = async () => {
+            const storedToken = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('user');
+            
+            if (storedToken && storedUser) {
+                setAuthToken(storedToken);
+                const hasActiveSubscription = await checkSubscription();
+                
+                setToken(storedToken);
+                setUser(JSON.parse(storedUser));
+                setIsAuthenticated(true);
+                
+                // Only redirect if we're on the login or signup pages
+                const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/signup';
+                if (isAuthPage) {
+                    navigate(hasActiveSubscription ? '/settings/subscription' : '/activate');
+                }
+            }
+            setIsLoading(false);
+        };
 
-    const handleAuthSuccess = useCallback((response: AuthResponse) => {
+        initializeAuth();
+    }, [navigate]);
+
+    const handleAuthSuccess = useCallback(async (response: AuthResponse) => {
         if (response.token && response.user) {
             setToken(response.token);
             setUser(response.user);
@@ -40,7 +62,10 @@ export const useAuth = () => {
             setAuthToken(response.token);
             localStorage.setItem('token', response.token);
             localStorage.setItem('user', JSON.stringify(response.user));
-            navigate('/settings/subscription');
+            
+            // Check subscription status after successful auth
+            const hasActiveSubscription = await checkSubscription();
+            navigate(hasActiveSubscription ? '/settings/subscription' : '/activate');
         }
     }, [navigate]);
 
@@ -87,4 +112,4 @@ export const useAuth = () => {
         verifyLogin,
         logout,
     };
-}; 
+};

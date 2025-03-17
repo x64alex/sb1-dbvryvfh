@@ -6,7 +6,14 @@ import { Footer } from './components/Footer';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
+import { ActivationPage } from './pages/ActivationPage';
 import { Subscription } from './pages/Settings/Subscription';
+import { PaymentMethods } from './pages/Settings/PaymentMethods';
+import { PaymentHistory } from './pages/Settings/PaymentHistory';
+import { ChangePlan } from './pages/Settings/ChangePlan';
+import { ConfirmPlan } from './pages/Settings/ConfirmPlan';
+import { CancelPlan } from './pages/Settings/CancelPlan';
+import { CancelConfirmation } from './pages/Settings/CancelConfirmation';
 import { CountryBanner } from './components/CountryBanner';
 import { useCountry } from './hooks/useCountry';
 import { useAuth } from './hooks/useAuth';
@@ -41,11 +48,60 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/activate" element={<ActivationPage />} />
             <Route 
               path="/settings/subscription" 
               element={
                 <ProtectedRoute>
                   <Subscription />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/payment-methods" 
+              element={
+                <ProtectedRoute>
+                  <PaymentMethods />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/transactions" 
+              element={
+                <ProtectedRoute>
+                  <PaymentHistory />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/change-plan" 
+              element={
+                <ProtectedRoute>
+                  <ChangePlan />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/change-plan/:planId" 
+              element={
+                <ProtectedRoute>
+                  <ConfirmPlan />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/cancel" 
+              element={
+                <ProtectedRoute>
+                  <CancelPlan />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/cancel-confirmation" 
+              element={
+                <ProtectedRoute>
+                  <CancelConfirmation />
                 </ProtectedRoute>
               } 
             />

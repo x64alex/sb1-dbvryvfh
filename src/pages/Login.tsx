@@ -187,17 +187,6 @@ export const Login: React.FC = () => {
                         </button>
                     </div>
                 </form>
-
-                {step === 'phone' && (
-                    <div className="text-center">
-                        <Link
-                            to="/forgot-pin"
-                            className="font-medium text-blue-600 hover:text-blue-500"
-                        >
-                            Forgot your PIN?
-                        </Link>
-                    </div>
-                )}
             </div>
         </div>
     );
