@@ -8,9 +8,6 @@ export interface SignUpRequest {
   email: string;
 }
 
-export interface ForgotPinRequest {
-  phone: string;
-}
 
 export interface ApiError {
   message: string;

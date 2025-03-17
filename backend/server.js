@@ -244,6 +244,17 @@ function authenticateToken(req, res, next) {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+}).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        // Try the next port
+        const newPort = PORT + 1;
+        console.log(`Port ${PORT} is busy, trying port ${newPort}`);
+        app.listen(newPort, () => {
+            console.log(`Server running on port ${newPort}`);
+        });
+    } else {
+        console.error('Server error:', err);
+    }
 }); 

@@ -5,7 +5,6 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
-import { ForgotPin } from './pages/ForgotPin';
 import { SignUp } from './pages/SignUp';
 import { CountryBanner } from './components/CountryBanner';
 import { useCountry } from './hooks/useCountry';
@@ -22,7 +21,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/forgot-pin" element={<ForgotPin />} />
             <Route path="/signup" element={<SignUp />} />
           </Routes>
         </main>
