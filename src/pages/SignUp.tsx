@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import { authApi } from '../network/api';
 
 type Step = 'details' | 'verify';
 
@@ -14,6 +15,17 @@ export const SignUp: React.FC = () => {
         code: ''
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [resendTimer, setResendTimer] = useState(0);
+
+    // Handle countdown timer for resend button
+    useEffect(() => {
+        if (resendTimer > 0) {
+            const timer = setInterval(() => {
+                setResendTimer(prev => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [resendTimer]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -48,6 +60,24 @@ export const SignUp: React.FC = () => {
         return Object.keys(newErrors).length === 0;
     };
 
+    const handleResendCode = async () => {
+        if (resendTimer > 0) return;
+
+        try {
+            const response = await authApi.resendCode({
+                phoneNumber: formData.phoneNumber,
+                type: 'signup'
+            });
+            toast.success(response.message);
+            setResendTimer(60); // Start 60-second countdown
+        } catch (error: any) {
+            if (error.response?.data?.remainingTime) {
+                setResendTimer(error.response.data.remainingTime);
+            }
+            toast.error(error.response?.data?.message || 'Error resending code');
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
@@ -60,6 +90,7 @@ export const SignUp: React.FC = () => {
                 });
                 toast.success(response.message);
                 setStep('verify');
+                setResendTimer(60); // Start initial 60-second countdown
             } else {
                 await verifySignup({
                     phoneNumber: formData.phoneNumber,
@@ -163,6 +194,22 @@ export const SignUp: React.FC = () => {
                                 {errors.code && (
                                     <p className="mt-2 text-sm text-red-600">{errors.code}</p>
                                 )}
+                                <div className="mt-2 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={handleResendCode}
+                                        disabled={resendTimer > 0}
+                                        className={`text-sm ${
+                                            resendTimer > 0
+                                                ? 'text-gray-400 cursor-not-allowed'
+                                                : 'text-blue-600 hover:text-blue-500'
+                                        }`}
+                                    >
+                                        {resendTimer > 0
+                                            ? `Resend code in ${resendTimer}s`
+                                            : 'Resend code'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

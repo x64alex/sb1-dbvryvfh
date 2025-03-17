@@ -14,6 +14,10 @@ const verificationCodes = new Map();
 // JWT secret key
 const JWT_SECRET = 'your-secret-key'; // In production, use environment variables
 
+// Constants
+const VERIFICATION_EXPIRY = 300000; // 5 minutes in milliseconds
+const RETRY_DELAY = 60000; // 1 minute in milliseconds
+
 // Generate a random 6-digit verification code
 function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -36,6 +40,57 @@ function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 }
+
+// Function to send verification code
+function sendVerificationCode(phoneNumber, type) {
+    const verificationCode = generateVerificationCode();
+    verificationCodes.set(phoneNumber, {
+        code: verificationCode,
+        timestamp: Date.now(),
+        type,
+        lastRetry: Date.now()
+    });
+    simulateSendSMS(phoneNumber, verificationCode);
+    return verificationCode;
+}
+
+// Resend code endpoint
+app.post('/api/resend-code', async (req, res) => {
+    try {
+        const { phoneNumber, type } = req.body;
+
+        if (!phoneNumber || !type) {
+            return res.status(400).json({ message: 'Phone number and type are required' });
+        }
+
+        const storedVerification = verificationCodes.get(phoneNumber);
+        
+        // Check if there's an existing verification attempt
+        if (!storedVerification) {
+            return res.status(400).json({ message: 'No verification in progress' });
+        }
+
+        // Check if enough time has passed since last retry
+        const timeSinceLastRetry = Date.now() - storedVerification.lastRetry;
+        if (timeSinceLastRetry < RETRY_DELAY) {
+            const remainingTime = Math.ceil((RETRY_DELAY - timeSinceLastRetry) / 1000);
+            return res.status(429).json({ 
+                message: `Please wait ${remainingTime} seconds before requesting a new code`,
+                remainingTime
+            });
+        }
+
+        // Send new verification code
+        sendVerificationCode(phoneNumber, type);
+
+        res.json({ 
+            message: 'New verification code sent',
+            phoneNumber
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error resending verification code' });
+    }
+});
 
 // Sign-up endpoint
 app.post('/api/signup', async (req, res) => {
@@ -62,14 +117,6 @@ app.post('/api/signup', async (req, res) => {
             return res.status(400).json({ message: 'Email already registered' });
         }
 
-        // Generate verification code
-        const verificationCode = generateVerificationCode();
-        verificationCodes.set(phoneNumber, {
-            code: verificationCode,
-            timestamp: Date.now(),
-            type: 'signup'
-        });
-
         // Store user data temporarily
         const tempUserData = {
             email,
@@ -78,8 +125,8 @@ app.post('/api/signup', async (req, res) => {
         };
         users.set(phoneNumber, tempUserData);
 
-        // Simulate sending SMS
-        simulateSendSMS(phoneNumber, verificationCode);
+        // Send verification code
+        sendVerificationCode(phoneNumber, 'signup');
 
         res.status(201).json({ 
             message: 'Verification code sent to your phone number',
@@ -150,16 +197,8 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid phone number or user not verified' });
         }
 
-        // Generate verification code for 2FA
-        const verificationCode = generateVerificationCode();
-        verificationCodes.set(phoneNumber, {
-            code: verificationCode,
-            timestamp: Date.now(),
-            type: 'login'
-        });
-
-        // Simulate sending SMS
-        simulateSendSMS(phoneNumber, verificationCode);
+        // Send verification code
+        sendVerificationCode(phoneNumber, 'login');
 
         res.json({
             message: 'Verification code sent to your phone number',

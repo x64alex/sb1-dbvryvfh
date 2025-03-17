@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
+import { authApi } from '../network/api';
 
 type Step = 'phone' | 'verify';
 
@@ -13,6 +14,16 @@ export const Login: React.FC = () => {
         code: ''
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [resendTimer, setResendTimer] = useState(0);
+
+    useEffect(() => {
+        if (resendTimer > 0) {
+            const timer = setInterval(() => {
+                setResendTimer(prev => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [resendTimer]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -39,6 +50,24 @@ export const Login: React.FC = () => {
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    const handleResendCode = async () => {
+        if (resendTimer > 0) return;
+
+        try {
+            const response = await authApi.resendCode({
+                phoneNumber: formData.phoneNumber,
+                type: 'login'
+            });
+            toast.success(response.message);
+            setResendTimer(60);
+        } catch (error: any) {
+            if (error.response?.data?.remainingTime) {
+                setResendTimer(error.response.data.remainingTime);
+            }
+            toast.error(error.response?.data?.message || 'Error resending code');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -128,6 +157,22 @@ export const Login: React.FC = () => {
                                 {errors.code && (
                                     <p className="mt-2 text-sm text-red-600">{errors.code}</p>
                                 )}
+                                <div className="mt-2 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={handleResendCode}
+                                        disabled={resendTimer > 0}
+                                        className={`text-sm ${
+                                            resendTimer > 0
+                                                ? 'text-gray-400 cursor-not-allowed'
+                                                : 'text-blue-600 hover:text-blue-500'
+                                        }`}
+                                    >
+                                        {resendTimer > 0
+                                            ? `Resend code in ${resendTimer}s`
+                                            : 'Resend code'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

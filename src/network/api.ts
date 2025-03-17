@@ -27,6 +27,17 @@ export interface AuthResponse {
     };
 }
 
+export interface ResendCodeRequest {
+    phoneNumber: string;
+    type: 'signup' | 'login';
+}
+
+export interface ResendCodeResponse {
+    message: string;
+    phoneNumber: string;
+    remainingTime?: number;
+}
+
 export const authApi = {
     signup: async (data: SignupRequest): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/signup', data);
@@ -45,6 +56,11 @@ export const authApi = {
 
     verifyLogin: async (data: VerifyCodeRequest): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/verify-login', data);
+        return response.data;
+    },
+
+    resendCode: async (data: ResendCodeRequest): Promise<ResendCodeResponse> => {
+        const response = await api.post<ResendCodeResponse>('/api/resend-code', data);
         return response.data;
     },
 };
