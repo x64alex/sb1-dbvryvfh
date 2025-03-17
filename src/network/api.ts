@@ -60,7 +60,7 @@ export const authApi = {
     },
 
     resendCode: async (data: ResendCodeRequest): Promise<ResendCodeResponse> => {
-        const response = await api.post<ResendCodeResponse>('/api/resend-code', data);
+        const response = await api.post<ResendCodeResponse>('/resend-code', data);
         return response.data;
     },
 };

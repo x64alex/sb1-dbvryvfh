@@ -79,6 +79,7 @@ export const Login: React.FC = () => {
                 const response = await login(formData.phoneNumber);
                 toast.success(response.message);
                 setStep('verify');
+                setResendTimer(60);
             } else {
                 await verifyLogin({
                     phoneNumber: formData.phoneNumber,
