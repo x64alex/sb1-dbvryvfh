@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Shield } from 'lucide-react';
-import { subscriptionApi } from '../network/api';
 import { toast } from 'react-hot-toast';
 
 interface Plan {

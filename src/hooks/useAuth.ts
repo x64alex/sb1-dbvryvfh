@@ -21,27 +21,6 @@ export const useAuth = () => {
     token: null
   });
 
-  const checkSubscriptionStatus = async () => {
-    try {
-      const subscription = await subscriptionApi.getSubscription();
-      
-      // Check if user has any subscription history
-      const hasSubscriptionHistory = subscription?.category && 
-        subscription.category !== 'Basic';
-
-      return {
-        isActive: subscription?.is_active || false,
-        hasHistory: hasSubscriptionHistory
-      };
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-      return {
-        isActive: false,
-        hasHistory: false
-      };
-    }
-  };
-
   // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = async () => {

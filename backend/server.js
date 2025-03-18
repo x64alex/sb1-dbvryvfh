@@ -213,24 +213,15 @@ app.get('/api/subscription', authenticateToken, (req, res) => {
     try {
         const { phoneNumber } = req.user;
         const subscription = subscriptions.get(phoneNumber);
+        console.log('Subscription response:', subscription);
         
         if (!subscription) {
             return res.json({
-                is_active: false,
-                category: 'Basic',
-                variation: 'month',
-                next_renewal: {
-                    unixtime: Math.floor(Date.now() / 1000)
-                },
-                userFeatures: {
-                    unmasking: false,
-                    blacklist: false,
-                    missed_call_alerts: false,
-                    cnam: false,
-                    transcriptions: false,
-                    recording: false
-                },
-                price: '4.95'
+                planId: 'basic',
+                duration: 'month',
+                startDate: null,
+                nextBillingDate: null,
+                is_active: false
             });
         }
 

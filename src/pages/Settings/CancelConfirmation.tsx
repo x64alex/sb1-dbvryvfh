@@ -132,10 +132,10 @@ export const CancelConfirmation = () => {
 
             <div className="text-center mb-8">
               <p className="text-lg font-medium mb-2">
-                You're on our <span className="text-green-600">{subscription.subscription.category}</span> plan
+                You're on our <span className="text-green-600">{subscription.category}</span> plan
               </p>
               <p className="text-gray-600">
-                Your subscription renews on {formatDate(subscription.subscription.next_renewal.unixtime)}, for ${subscription.price}.
+                Your subscription renews on {formatDate(subscription.next_renewal.unixtime)}, for ${subscription.price}.
                 If you cancel now, TrapCall will stop working immediately.
               </p>
             </div>

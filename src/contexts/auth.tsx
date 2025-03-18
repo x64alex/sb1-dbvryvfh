@@ -29,9 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const subscription = await subscriptionApi.getSubscription();
+        console.log('Subscription response:', subscription);
         const hasHistory = subscription?.next_renewal !== null;
         
         setSubscriptionStatus({
+          isActive: subscription?.is_active || false,
+          hasHistory: Boolean(hasHistory)
+        });
+        console.log('Updated subscription status:', {
           isActive: subscription?.is_active || false,
           hasHistory: Boolean(hasHistory)
         });
