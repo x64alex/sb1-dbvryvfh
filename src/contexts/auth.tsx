@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { subscriptionApi } from '../network/api';
 import { useAuth } from '../hooks/useAuth';
@@ -11,6 +11,7 @@ interface SubscriptionStatus {
 interface AuthContextType {
   subscriptionStatus: SubscriptionStatus | null;
   isCheckingStatus: boolean;
+  checkStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,38 +21,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
+  const checkStatus = async () => {
+    if (!isAuthenticated) {
+      setIsCheckingStatus(false);
+      return;
+    }
+
+    try {
+      setIsCheckingStatus(true);
+      const subscription = await subscriptionApi.getSubscription();
+      console.log('Subscription response:', subscription);
+      const hasHistory = subscription?.next_renewal !== null;
+      
+      setSubscriptionStatus({
+        isActive: subscription?.is_active || false,
+        hasHistory: Boolean(hasHistory)
+      });
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
   useEffect(() => {
-    const checkStatus = async () => {
-      if (!isAuthenticated) {
-        setIsCheckingStatus(false);
-        return;
-      }
-
-      try {
-        const subscription = await subscriptionApi.getSubscription();
-        console.log('Subscription response:', subscription);
-        const hasHistory = subscription?.next_renewal !== null;
-        
-        setSubscriptionStatus({
-          isActive: subscription?.is_active,
-          hasHistory: Boolean(hasHistory)
-        });
-        console.log('Updated subscription status:', {
-          isActive: subscription?.is_active,
-          hasHistory: Boolean(hasHistory)
-        });
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-      } finally {
-        setIsCheckingStatus(false);
-      }
-    };
-
     checkStatus();
   }, [isAuthenticated]);
 
   return (
-    <AuthContext.Provider value={{ subscriptionStatus, isCheckingStatus }}>
+    <AuthContext.Provider value={{ subscriptionStatus, isCheckingStatus, checkStatus }}>
       {children}
     </AuthContext.Provider>
   );
@@ -67,7 +65,14 @@ export const useAuthContext = () => {
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const { subscriptionStatus, isCheckingStatus } = useAuthContext();
+  const { subscriptionStatus, isCheckingStatus, checkStatus } = useAuthContext();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated && !isCheckingStatus) {
+      checkStatus();
+    }
+  }, [isAuthenticated, location.pathname]);
 
   if (isLoading || isCheckingStatus) {
     return (
@@ -76,7 +81,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       </div>
     );
   }
-  console.log('subscriptionStatus', subscriptionStatus);
+  console.log('ProtectedRoute', subscriptionStatus);
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }

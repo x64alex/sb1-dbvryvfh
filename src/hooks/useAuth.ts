@@ -46,6 +46,7 @@ export const useAuth = () => {
 
   const handleAuthSuccess = useCallback(async (response: AuthResponse) => {
     if (response.token && response.user) {
+      console.log('handleAuthSuccess');
       const newState = {
         isAuthenticated: true,
         isLoading: false,
@@ -58,14 +59,7 @@ export const useAuth = () => {
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       navigate('/settings/subscription');
-      
-      // if (isActive) {
-      //   navigate('/settings/subscription');
-      // } else if (hasHistory) {
-      //   navigate('/settings/reactivate');
-      // } else {
-      //   navigate('/activate');
-      // }
+
     }
   }, [navigate]);
 
