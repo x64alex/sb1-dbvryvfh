@@ -33,11 +33,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const hasHistory = subscription?.next_renewal !== null;
         
         setSubscriptionStatus({
-          isActive: subscription?.is_active || false,
+          isActive: subscription?.is_active,
           hasHistory: Boolean(hasHistory)
         });
         console.log('Updated subscription status:', {
-          isActive: subscription?.is_active || false,
+          isActive: subscription?.is_active,
           hasHistory: Boolean(hasHistory)
         });
       } catch (error) {

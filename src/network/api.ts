@@ -7,17 +7,6 @@ const api = axios.create({
   },
 });
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.message === 'Network Error') {
-      console.error('Network error - make sure API is running');
-    }
-    return Promise.reject(error);
-  }
-);
-
 export interface SignupRequest {
     email: string;
     phoneNumber: string;
@@ -227,7 +216,9 @@ export const planApi = {
 
 export const subscriptionApi = {
     getSubscription: async (): Promise<SubscriptionResponse> => {
+        console.log('Getting subscription');
         const response = await api.get<SubscriptionResponse>('/subscription');
+        console.log('subscriptionApi response:', response.data);
         return response.data;
     },
 };

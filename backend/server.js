@@ -210,19 +210,14 @@ function sendVerificationCode(phoneNumber, type) {
 
 // Get subscription endpoint
 app.get('/api/subscription', authenticateToken, (req, res) => {
+    console.log('Backend subscription');
     try {
         const { phoneNumber } = req.user;
         const subscription = subscriptions.get(phoneNumber);
-        console.log('Subscription response:', subscription);
+        console.log('Subscription backend response:', subscription);
         
         if (!subscription) {
-            return res.json({
-                planId: 'basic',
-                duration: 'month',
-                startDate: null,
-                nextBillingDate: null,
-                is_active: false
-            });
+            return res.json(null);
         }
 
         res.json(subscription);

@@ -57,8 +57,6 @@ export const useAuth = () => {
       setAuthToken(response.token);
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Check subscription status after successful auth
       navigate('/settings/subscription');
       
       // if (isActive) {
