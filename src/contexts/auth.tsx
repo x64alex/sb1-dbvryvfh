@@ -66,13 +66,12 @@ export const useAuthContext = () => {
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const { subscriptionStatus, isCheckingStatus, checkStatus } = useAuthContext();
-  const location = useLocation();
 
   useEffect(() => {
     if (isAuthenticated && !isCheckingStatus) {
       checkStatus();
     }
-  }, [isAuthenticated, location.pathname]);
+  }, []);
 
   if (isLoading || isCheckingStatus) {
     return (
