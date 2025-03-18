@@ -286,40 +286,86 @@ app.post('/api/setup-intent', authenticateToken, async (req, res) => {
 // Confirm Setup Intent endpoint
 app.post('/api/confirm-setup-intent', authenticateToken, async (req, res) => {
     try {
-        const { clientSecret, paymentMethod } = req.body;
+        const { phoneNumber } = req.user;
+        const { paymentMethodId, billingCycle } = req.body;
 
-        if (!clientSecret || !paymentMethod) {
-            return res.status(400).json({ message: 'Client secret and payment method are required' });
+        if (!paymentMethodId || !billingCycle) {
+            return res.status(400).json({ message: 'Payment method ID and billing cycle are required' });
         }
 
-        // Retrieve the setup intent from Stripe
-        const setupIntentId = clientSecret.split('_secret_')[0];
-        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
-
-        if (setupIntent.status !== 'succeeded') {
-            return res.status(400).json({ message: 'Setup intent not succeeded' });
+        const user = users.get(phoneNumber);
+        if (!user || !user.stripeCustomerId) {
+            return res.status(400).json({ message: 'Invalid user or missing customer ID' });
         }
 
-        // Create a new card
-        const cardId = Math.max(...Array.from(cards.keys()), 0) + 1;
-        const newCard = {
-            id: cardId,
-            last4: paymentMethod.last4,
-            brand: paymentMethod.brand,
-            expMonth: paymentMethod.exp_month,
-            expYear: paymentMethod.exp_year,
-            isDefault: cards.size === 0, // Make default if it's the first card
-            stripePaymentMethodId: paymentMethod.id
+        // Attach payment method to customer
+        await stripe.paymentMethods.attach(paymentMethodId, {
+            customer: user.stripeCustomerId,
+        });
+
+        // Set as default payment method
+        await stripe.customers.update(user.stripeCustomerId, {
+            invoice_settings: {
+                default_payment_method: paymentMethodId,
+            },
+        });
+
+        // Get payment method details
+        const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+        
+        // Clear any existing cards for this user
+        for (const [key, card] of cards.entries()) {
+            cards.delete(key);
+        }
+        
+        // Save new card
+        const card = {
+            id: Date.now(),
+            last4: paymentMethod.card.last4,
+            brand: paymentMethod.card.brand,
+            expMonth: paymentMethod.card.exp_month,
+            expYear: paymentMethod.card.exp_year,
+            isDefault: true,
+            stripePaymentMethodId: paymentMethodId
+        };
+        cards.set(card.id, card);
+
+        // Create subscription
+        const subscription = {
+            is_active: true,
+            category: 'Ultimate',
+            variation: billingCycle,
+            next_renewal: {
+                unixtime: Math.floor(Date.now() / 1000) + (billingCycle === 'weekly' ? 7 * 24 * 60 * 60 : 365 * 24 * 60 * 60)
+            },
+            userFeatures: {
+                unmasking: true,
+                blacklist: true,
+                missed_call_alerts: true,
+                cnam: true,
+                transcriptions: true,
+                recording: true
+            },
+            price: billingCycle === 'weekly' ? '7.99' : '99.99'
         };
 
-        cards.set(cardId, newCard);
+        // Save subscription
+        subscriptions.set(phoneNumber, subscription);
+
+        // Update user
+        user.hasSubscription = true;
+        user.activeSubscription = subscription;
+        users.set(phoneNumber, user);
 
         res.json({
-            setupIntent: {
-                id: setupIntent.id,
-                status: setupIntent.status
-            },
-            card: newCard
+            success: true,
+            card,
+            user: {
+                phoneNumber: user.phoneNumber,
+                email: user.email,
+                hasSubscription: true,
+                activeSubscription: subscription
+            }
         });
     } catch (error) {
         console.error('Error confirming setup intent:', error);
