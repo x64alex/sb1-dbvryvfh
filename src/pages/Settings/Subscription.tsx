@@ -106,6 +106,8 @@ export const Subscription = () => {
         return 'year';
       case 'month':
         return 'month';
+      case 'weekly':
+        return 'week';
       default:
         return duration;
     }
@@ -119,6 +121,8 @@ export const Subscription = () => {
         return 'two_years';
       case 'month':
         return 'month';
+      case 'weekly':
+        return 'weekly';
       default:
         return 'month';
     }
