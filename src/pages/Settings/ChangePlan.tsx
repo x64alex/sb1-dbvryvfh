@@ -18,7 +18,7 @@ export const ChangePlan = () => {
           subscriptionApi.getSubscription()
         ]);
         setPlans(plansData);
-        const currentPlanId = subscriptionData.subscription.category.toLowerCase();
+        const currentPlanId = subscriptionData.category.toLowerCase();
         setCurrentPlan(currentPlanId);
 
         // Fetch features for all plans

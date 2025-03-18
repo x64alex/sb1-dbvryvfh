@@ -15,58 +15,73 @@ export const Subscription = () => {
   const [pricing, setPricing] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    const fetchSubscriptionData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        setError(null);
-        
-        // Fetch subscription data
         const data = await subscriptionApi.getSubscription();
+        
         if (!data) {
           throw new Error('No subscription data received');
         }
+        
         setSubscriptionData(data);
         
         // Get current plan features and pricing
-        const currentPlanId = data.category?.toLowerCase() || 'basic';
-        
-        // Fetch features for all plans
-        const fetchFeatures = async () => {
-          const features: Record<string, PlanFeature[]> = {};
-          const pricingData: Record<string, any> = {};
-          
-          for (const planId of ['basic', 'premium', 'ultimate']) {
-            try {
-              const [planFeatures, planPricing] = await Promise.all([
-                planApi.getPlanFeatures(planId),
-                planApi.getPlanPricing(planId)
-              ]);
-              features[planId] = planFeatures;
-              pricingData[planId] = planPricing;
-            } catch (error) {
-              console.error(`Error fetching ${planId} plan details:`, error);
-            }
+        const currentPlanId = data?.category?.toLowerCase() || 'basic';
+        const [currentFeatures, currentPricing] = await Promise.all([
+          planApi.getPlanFeatures(currentPlanId),
+          planApi.getPlanPricing(currentPlanId)
+        ]).catch(error => {
+          console.error('Error fetching plan details:', error);
+          return [[], {}] as [PlanFeature[], Record<string, number>];
+        });
+
+        setCurrentFeatures(currentFeatures);
+        setPricing({ [currentPlanId]: currentPricing });
+
+        // If on basic plan, get both premium and ultimate features
+        if (currentPlanId === 'basic') {
+          try {
+            const [premiumFeatures, ultimateFeatures, premiumPricing, ultimatePricing] = await Promise.all([
+              planApi.getPlanFeatures('premium'),
+              planApi.getPlanFeatures('ultimate'),
+              planApi.getPlanPricing('premium'),
+              planApi.getPlanPricing('ultimate')
+            ]);
+            setPremiumFeatures(premiumFeatures);
+            setUltimateFeatures(ultimateFeatures);
+            setPricing(prev => ({
+              ...prev,
+              premium: premiumPricing,
+              ultimate: ultimatePricing
+            }));
+          } catch (error) {
+            console.error('Error fetching upgrade plans:', error);
           }
-          
-          return { features, pricingData };
-        };
-        
-        const { features, pricingData } = await fetchFeatures();
-        
-        setCurrentFeatures(features[currentPlanId] || []);
-        setPremiumFeatures(features.premium || []);
-        setUltimateFeatures(features.ultimate || []);
-        setPricing(pricingData);
-        
+        } else if (currentPlanId === 'premium') {
+          try {
+            const [ultimateFeatures, ultimatePricing] = await Promise.all([
+              planApi.getPlanFeatures('ultimate'),
+              planApi.getPlanPricing('ultimate')
+            ]);
+            setUltimateFeatures(ultimateFeatures);
+            setPricing(prev => ({
+              ...prev,
+              ultimate: ultimatePricing
+            }));
+          } catch (error) {
+            console.error('Error fetching ultimate plan:', error);
+          }
+        }
       } catch (error) {
-        console.error('Error fetching subscription data:', error);
-        setError(error instanceof Error ? error.message : 'An error occurred while fetching subscription data');
+        console.error('Error fetching subscription:', error);
+        setSubscriptionData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSubscriptionData();
+    fetchData();
   }, []);
 
   const formatDate = (unixtime: number) => {
@@ -132,35 +147,15 @@ export const Subscription = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">Error loading subscription data</div>
-          <div className="text-gray-600">{error}</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (!subscriptionData) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-600">Invalid subscription data</div>
-          <div className="text-sm text-gray-500 mt-2">Please contact support if this issue persists</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh
-          </button>
+      <div className="min-h-screen bg-gray-50 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center text-red-600">
+              <p>Error loading subscription data</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -170,9 +165,6 @@ export const Subscription = () => {
   const upgradeFeatures = getUpgradeFeatures();
   const currentPricing = pricing[currentPlanId] || {};
   const duration = subscriptionData.variation || 'month';
-  const nextRenewal = subscriptionData.next_renewal?.unixtime 
-    ? formatDate(subscriptionData.next_renewal.unixtime)
-    : 'Not available';
 
   return (
     <div className="min-h-screen bg-gray-50 pt-32 pb-12">
@@ -182,22 +174,19 @@ export const Subscription = () => {
           <div className="px-6 py-5 sm:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                  {currentPlanId.charAt(0).toUpperCase() + currentPlanId.slice(1)} Plan
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900">Your Subscription</h1>
                 <p className="mt-1 text-sm text-gray-500">
-                  Billed {duration === 'month' ? 'monthly' : 'annually'} · Next renewal on {nextRenewal}
+                  Manage your plan, billing, and subscription settings
                 </p>
               </div>
-              {currentPlanId !== 'ultimate' && (
+              <div className="hidden sm:block">
                 <Link
-                  to="/settings/upgrade"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  to="/settings/change-plan"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  Upgrade Plan
-                  <ChevronRight className="ml-2 -mr-1 h-4 w-4" />
+                  Change Plan
                 </Link>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -208,27 +197,15 @@ export const Subscription = () => {
             <div>
               <div className="flex items-center">
                 <Shield className="h-6 w-6 mr-2" />
-                <h2 className="text-xl font-semibold">{currentPlanId.charAt(0).toUpperCase() + currentPlanId.slice(1)} Plan</h2>
+                <h2 className="text-xl font-semibold">{subscriptionData.category} Plan</h2>
               </div>
               <p className="mt-2 text-blue-100">
-                Next billing date: {nextRenewal}
+                Next billing date: {formatDate(subscriptionData.next_renewal.unixtime)}
               </p>
-              {subscriptionData.userFeatures && Object.keys(subscriptionData.userFeatures).length > 0 && (
-                <div className="mt-4 flex items-center text-sm text-blue-100">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  <span>{Object.values(subscriptionData.userFeatures).filter(Boolean).length} features enabled</span>
-                </div>
-              )}
             </div>
             <div className="text-right">
-              {currentPricing[duration] ? (
-                <>
-                  <p className="text-2xl font-bold">{formatPrice(currentPricing[duration])}</p>
-                  <p className="text-blue-100">per {formatDuration(duration)}</p>
-                </>
-              ) : (
-                <p className="text-lg">Contact support for pricing</p>
-              )}
+              <p className="text-2xl font-bold">{formatPrice(currentPricing[duration])}</p>
+              <p className="text-blue-100">per {formatDuration(duration)}</p>
             </div>
           </div>
         </div>
@@ -238,40 +215,57 @@ export const Subscription = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Current Features</h3>
             <div className="space-y-3">
-              {currentFeatures.length > 0 ? (
-                currentFeatures
-                  .filter(f => f.included)
-                  .map((feature, index) => (
-                    <div key={index} className="flex items-center text-gray-700">
-                      <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                      <span>{renderFeatureText(feature.title)}</span>
-                    </div>
-                  ))
-              ) : (
-                <p className="text-gray-500">No features available for this plan</p>
-              )}
+              {currentFeatures.filter(f => f.included).map((feature, index) => (
+                <div key={index} className="flex items-center text-gray-700">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                  <span>{renderFeatureText(feature.title)}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {currentPlanId !== 'ultimate' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Available in {selectedUpgradePlan.charAt(0).toUpperCase() + selectedUpgradePlan.slice(1)}
-              </h3>
-              <div className="space-y-3">
-                {upgradeFeatures.length > 0 ? (
-                  upgradeFeatures.map((feature, index) => (
-                    <div key={index} className="flex items-center text-gray-700">
-                      <CheckCircle className="h-5 w-5 text-blue-500 mr-2" />
-                      <span>{renderFeatureText(feature.title)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No additional features available</p>
-                )}
-              </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Available Upgrades</h3>
+              {currentPlanId === 'basic' && (
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setSelectedUpgradePlan('premium')}
+                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                      selectedUpgradePlan === 'premium'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Premium
+                  </button>
+                  <button
+                    onClick={() => setSelectedUpgradePlan('ultimate')}
+                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                      selectedUpgradePlan === 'ultimate'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Ultimate
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+            <div className="space-y-3">
+              {upgradeFeatures.map((feature, index) => (
+                <div key={index} className="flex items-center text-gray-500">
+                  <div className="h-5 w-5 border-2 border-gray-300 rounded-full mr-3 flex items-center justify-center">
+                    <div className="h-2 w-2 bg-gray-300 rounded-full"></div>
+                  </div>
+                  <span>{renderFeatureText(feature.title)}</span>
+                </div>
+              ))}
+              {upgradeFeatures.length === 0 && (
+                <p className="text-gray-500 italic">You have access to all available features!</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
