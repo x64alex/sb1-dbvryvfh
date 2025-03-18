@@ -29,10 +29,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const subscription = await subscriptionApi.getSubscription();
-        const hasHistory = subscription?.subscription?.subscription?.sku?.category !== 'Basic';
+        const hasHistory = subscription?.category !== 'Basic';
         
         setSubscriptionStatus({
-          isActive: subscription?.subscription?.is_active || false,
+          isActive: subscription?.is_active || false,
           hasHistory: Boolean(hasHistory)
         });
       } catch (error) {

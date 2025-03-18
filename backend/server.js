@@ -55,18 +55,11 @@ users.set('+10987654321', {
 
 // Set up subscriptions for test users
 subscriptions.set('+11234567890', {
-  subscription: {
-    is_active: true,
-    category: 'Premium',
-    next_renewal: {
-      unixtime: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days from now
-    },
-    subscription: {
-      sku: {
-        category: 'Premium',
-        variation: 'month'
-      }
-    }
+  is_active: true,
+  category: 'Premium',
+  variation: 'month',
+  next_renewal: {
+    unixtime: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days from now
   },
   userFeatures: {
     unmasking: true,
@@ -80,18 +73,11 @@ subscriptions.set('+11234567890', {
 });
 
 subscriptions.set('+10987654321', {
-  subscription: {
-    is_active: false,
-    category: 'Basic',
-    next_renewal: {
-      unixtime: Math.floor(Date.now() / 1000) - (24 * 60 * 60) // Expired yesterday
-    },
-    subscription: {
-      sku: {
-        category: 'Basic',
-        variation: 'month'
-      }
-    }
+  is_active: false,
+  category: 'Basic',
+  variation: 'month',
+  next_renewal: {
+    unixtime: Math.floor(Date.now() / 1000) - (24 * 60 * 60) // Expired yesterday
   },
   userFeatures: {
     unmasking: false,
@@ -230,18 +216,11 @@ app.get('/api/subscription', authenticateToken, (req, res) => {
         
         if (!subscription) {
             return res.json({
-                subscription: {
-                    is_active: false,
-                    category: 'Basic',
-                    next_renewal: {
-                        unixtime: Math.floor(Date.now() / 1000)
-                    },
-                    subscription: {
-                        sku: {
-                            category: 'Basic',
-                            variation: 'month'
-                        }
-                    }
+                is_active: false,
+                category: 'Basic',
+                variation: 'month',
+                next_renewal: {
+                    unixtime: Math.floor(Date.now() / 1000)
                 },
                 userFeatures: {
                     unmasking: false,

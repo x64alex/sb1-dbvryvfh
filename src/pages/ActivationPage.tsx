@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Shield } from 'lucide-react';
 import { subscriptionApi } from '../network/api';
 import { toast } from 'react-hot-toast';
@@ -51,7 +51,6 @@ const plans: Plan[] = [
 
 export const ActivationPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
   const [isLoading, setIsLoading] = useState(true);
@@ -62,15 +61,15 @@ export const ActivationPage = () => {
         const subscription = await subscriptionApi.getSubscription();
         
         // If subscription exists and is active, redirect to subscription page
-        if (subscription?.subscription?.is_active) {
+        if (subscription?.is_active) {
           navigate('/settings/subscription');
           return;
         }
 
         // Check if user had a previous subscription
-        const hadPreviousSubscription = subscription?.subscription?.category && 
-          (subscription.subscription.category !== 'Basic' || 
-          (subscription.subscription.category === 'Basic' && !subscription.subscription.is_active));
+        const hadPreviousSubscription = subscription?.category && 
+          (subscription.category !== 'Basic' || 
+          (subscription.category === 'Basic' && !subscription.is_active));
 
         // If user had a previous subscription, redirect to reactivate page
         if (hadPreviousSubscription) {

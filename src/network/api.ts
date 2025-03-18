@@ -7,6 +7,17 @@ const api = axios.create({
   },
 });
 
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.message === 'Network Error') {
+      console.error('Network error - make sure API is running');
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface SignupRequest {
     email: string;
     phoneNumber: string;
@@ -85,18 +96,11 @@ export interface ChangePlanRequest {
 }
 
 export interface SubscriptionResponse {
-    subscription: {
-        is_active: boolean;
-        category: string;
-        next_renewal: {
-            unixtime: number;
-        };
-        subscription: {
-            sku: {
-                category: string;
-                variation: string;
-            };
-        };
+    is_active: boolean;
+    category: string;
+    variation: string;
+    next_renewal: {
+        unixtime: number;
     };
     userFeatures: {
         unmasking: boolean;
