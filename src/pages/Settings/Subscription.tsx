@@ -18,63 +18,51 @@ export const Subscription = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await subscriptionApi.getSubscription();
+        setError(null);
         
+        // Fetch subscription data first
+        const data = await subscriptionApi.getSubscription();
         if (!data) {
           throw new Error('No subscription data received');
         }
-        
         setSubscriptionData(data);
         
-        // Get current plan features and pricing
-        const currentPlanId = data?.category?.toLowerCase() || 'basic';
-        const [currentFeatures, currentPricing] = await Promise.all([
-          planApi.getPlanFeatures(currentPlanId),
-          planApi.getPlanPricing(currentPlanId)
-        ]).catch(error => {
-          console.error('Error fetching plan details:', error);
-          return [[], {}] as [PlanFeature[], Record<string, number>];
+        const currentPlanId = data.category?.toLowerCase() || 'basic';
+        
+        // Fetch all plan data concurrently
+        const planIds = ['basic', 'premium', 'ultimate'];
+        const planData = await Promise.all(
+          planIds.map(async (planId) => {
+            try {
+              const [features, pricing] = await Promise.all([
+                planApi.getPlanFeatures(planId),
+                planApi.getPlanPricing(planId)
+              ]);
+              return { planId, features, pricing };
+            } catch (error) {
+              console.error(`Error fetching ${planId} plan:`, error);
+              return { planId, features: [], pricing: {} };
+            }
+          })
+        );
+
+        // Update state with fetched data
+        const pricingData: Record<string, any> = {};
+        planData.forEach(({ planId, features, pricing }) => {
+          if (planId === currentPlanId) {
+            setCurrentFeatures(features);
+          } else if (planId === 'premium') {
+            setPremiumFeatures(features);
+          } else if (planId === 'ultimate') {
+            setUltimateFeatures(features);
+          }
+          pricingData[planId] = pricing;
         });
+        setPricing(pricingData);
 
-        setCurrentFeatures(currentFeatures);
-        setPricing({ [currentPlanId]: currentPricing });
-
-        // If on basic plan, get both premium and ultimate features
-        if (currentPlanId === 'basic') {
-          try {
-            const [premiumFeatures, ultimateFeatures, premiumPricing, ultimatePricing] = await Promise.all([
-              planApi.getPlanFeatures('premium'),
-              planApi.getPlanFeatures('ultimate'),
-              planApi.getPlanPricing('premium'),
-              planApi.getPlanPricing('ultimate')
-            ]);
-            setPremiumFeatures(premiumFeatures);
-            setUltimateFeatures(ultimateFeatures);
-            setPricing(prev => ({
-              ...prev,
-              premium: premiumPricing,
-              ultimate: ultimatePricing
-            }));
-          } catch (error) {
-            console.error('Error fetching upgrade plans:', error);
-          }
-        } else if (currentPlanId === 'premium') {
-          try {
-            const [ultimateFeatures, ultimatePricing] = await Promise.all([
-              planApi.getPlanFeatures('ultimate'),
-              planApi.getPlanPricing('ultimate')
-            ]);
-            setUltimateFeatures(ultimateFeatures);
-            setPricing(prev => ({
-              ...prev,
-              ultimate: ultimatePricing
-            }));
-          } catch (error) {
-            console.error('Error fetching ultimate plan:', error);
-          }
-        }
       } catch (error) {
         console.error('Error fetching subscription:', error);
+        setError(error instanceof Error ? error.message : 'Error fetching subscription data');
         setSubscriptionData(null);
       } finally {
         setIsLoading(false);
@@ -153,7 +141,7 @@ export const Subscription = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center text-red-600">
-              <p>Error loading subscription data</p>
+              <p>{error}</p>
             </div>
           </div>
         </div>
