@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Shield, CreditCard, Clock, Settings, ChevronRight, CheckCircle } from 'lucide-react';
 import { subscriptionApi, SubscriptionResponse, planApi, PlanFeature } from '../../network/api';
+import { useAuth } from '../../context/AuthProvider';
 
 export const Subscription = () => {
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionResponse | null>(null);

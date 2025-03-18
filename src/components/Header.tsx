@@ -1,32 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Menu, X, Settings } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthProvider';
 
 export function Header() {
-  const [showButton, setShowButton] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
-  const isLoginPage = location.pathname === '/login';
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const heroHeight = window.innerHeight;
-      const scrollPosition = window.scrollY;
-      setShowButton(scrollPosition > heroHeight * 0.7);
-    };
-
-    if (!isLoginPage) {
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [isLoginPage]);
-
-  const handleLogout = () => {
-    logout();
-    setIsMenuOpen(false);
-  };
 
   return (
     <nav className="fixed w-full bg-white/80 backdrop-blur-sm z-50 border-b mt-8">
@@ -44,41 +23,24 @@ export function Header() {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="https://support.trapcall.com/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-600">
-              Support
-            </a>
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/settings/subscription"
-                  className="text-gray-600 hover:text-blue-600 flex items-center"
-                >
+                <Link to="/settings/subscription" className="text-gray-600 hover:text-blue-600 flex items-center">
                   <Settings className="h-5 w-5 mr-1" />
                   Settings
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-600 hover:text-blue-600"
-                >
+                <button onClick={logout} className="text-gray-600 hover:text-blue-600">
                   Log Out
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="text-gray-600 hover:text-blue-600"
-                >
+                <Link to="/login" className="text-gray-600 hover:text-blue-600">
                   Log In
                 </Link>
-                {showButton && (
-                  <Link
-                    to="/signup"
-                    className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition"
-                  >
-                    Try TrapCall for Free
-                  </Link>
-                )}
+                <Link to="/signup" className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition">
+                  Try TrapCall for Free
+                </Link>
               </>
             )}
           </div>
@@ -120,7 +82,7 @@ export function Header() {
                   Settings
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={logout}
                   className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
                 >
                   Log Out

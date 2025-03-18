@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse, SubscriptionResponse } from '../network/api';
+import { authApi, setAuthToken, clearAuthToken } from '../network/api';
+import { AuthResponse, SubscriptionResponse, SignupRequest, VerifyCodeRequest } from '../network/types';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -14,7 +15,17 @@ interface AuthState {
   token: string | null;
 }
 
-export const useAuth = () => {
+interface AuthContextType extends AuthState {
+  signup: (data: SignupRequest) => Promise<AuthResponse>;
+  verifySignup: (data: VerifyCodeRequest) => Promise<AuthResponse>;
+  login: (phoneNumber: string) => Promise<AuthResponse>;
+  verifyLogin: (data: VerifyCodeRequest) => Promise<AuthResponse>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
@@ -27,9 +38,8 @@ export const useAuth = () => {
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken && storedUser) {
-      setAuthToken(storedToken);
       const parsedUser = JSON.parse(storedUser);
       setState({
         isAuthenticated: true,
@@ -37,8 +47,10 @@ export const useAuth = () => {
         token: storedToken,
         user: parsedUser
       });
+      setAuthToken(storedToken);
     } else {
       setState(prev => ({ ...prev, isLoading: false }));
+      clearAuthToken();
     }
   }, []);
 
@@ -50,32 +62,29 @@ export const useAuth = () => {
         token: response.token,
         user: response.user
       });
-      
-      setAuthToken(response.token);
+
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Navigate based on subscription status
+      setAuthToken(response.token);
+
       if (!response.user.hasSubscription) {
         navigate('/activate');
-      } else if (!response.user.activeSubscription?.is_active && response.user.activeSubscription?.next_renewal) {
-        navigate('/settings/reactivate');
       } else {
         navigate('/settings/subscription');
       }
     }
   }, [navigate]);
 
-  const signup = useCallback(async (data: SignupRequest) => {
+  const signup = async (data: SignupRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       return await authApi.signup(data);
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, []);
+  };
 
-  const verifySignup = useCallback(async (data: VerifyCodeRequest) => {
+  const verifySignup = async (data: VerifyCodeRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await authApi.verifySignup(data);
@@ -84,18 +93,18 @@ export const useAuth = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [handleAuthSuccess]);
+  };
 
-  const login = useCallback(async (phoneNumber: string) => {
+  const login = async (phoneNumber: string) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       return await authApi.login(phoneNumber);
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, []);
+  };
 
-  const verifyLogin = useCallback(async (data: VerifyCodeRequest) => {
+  const verifyLogin = async (data: VerifyCodeRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await authApi.verifyLogin(data);
@@ -104,27 +113,33 @@ export const useAuth = () => {
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [handleAuthSuccess]);
+  };
 
-  const logout = useCallback(() => {
+  const logout = () => {
     setState({
       isAuthenticated: false,
       isLoading: false,
       token: null,
       user: null
     });
-    clearAuthToken();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearAuthToken();
     navigate('/login');
-  }, [navigate]);
-
-  return {
-    ...state,
-    signup,
-    verifySignup,
-    login,
-    verifyLogin,
-    logout
   };
+
+  return (
+    <AuthContext.Provider value={{ ...state, signup, verifySignup, login, verifyLogin, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+// Custom hook to use AuthContext
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}; 
