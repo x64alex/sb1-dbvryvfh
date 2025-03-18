@@ -55,37 +55,6 @@ export const ActivationPage = () => {
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      try {
-        const subscription = await subscriptionApi.getSubscription();
-        
-        // If subscription exists and is active, redirect to subscription page
-        if (subscription?.is_active) {
-          navigate('/settings/subscription');
-          return;
-        }
-
-        // Check if user had a previous subscription
-        const hadPreviousSubscription = subscription?.category && 
-          (subscription.category !== 'Basic' || 
-          (subscription.category === 'Basic' && !subscription.is_active));
-
-        // If user had a previous subscription, redirect to reactivate page
-        if (hadPreviousSubscription) {
-          navigate('/settings/reactivate');
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        toast.error('Failed to load subscription details');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [navigate]);
 
   const handleContinue = () => {
     const plan = plans.find(p => p.id === selectedPlan);

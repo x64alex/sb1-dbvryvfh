@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const subscription = await subscriptionApi.getSubscription();
-        const hasHistory = subscription?.category !== 'Basic';
+        const hasHistory = subscription?.next_renewal !== null;
         
         setSubscriptionStatus({
           isActive: subscription?.is_active || false,
@@ -63,7 +63,6 @@ export const useAuthContext = () => {
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const { subscriptionStatus, isCheckingStatus } = useAuthContext();
-  const location = useLocation();
 
   if (isLoading || isCheckingStatus) {
     return (
@@ -72,39 +71,27 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       </div>
     );
   }
-
+  console.log('subscriptionStatus', subscriptionStatus);
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
 
-  // If we have subscription status and user is trying to access a protected route
-  if (subscriptionStatus) {
-    const currentPath = location.pathname;
-    const isSettingsPage = currentPath.startsWith('/settings');
-    const isActivationPage = currentPath === '/activate';
-    const isReactivationPage = currentPath === '/settings/reactivate';
-
-    // Redirect logic based on subscription status
-    if (subscriptionStatus.isActive && (isActivationPage || isReactivationPage)) {
-      return <Navigate to="/settings/subscription" />;
-    }
-
-    if (!subscriptionStatus.isActive) {
-      if (subscriptionStatus.hasHistory && !isReactivationPage) {
-        return <Navigate to="/settings/reactivate" />;
-      }
-      if (!subscriptionStatus.hasHistory && !isActivationPage) {
-        return <Navigate to="/activate" />;
-      }
-    }
-
-    // Prevent access to settings pages if subscription is not active
-    if (!subscriptionStatus.isActive && isSettingsPage && !isReactivationPage) {
-      return subscriptionStatus.hasHistory ? 
-        <Navigate to="/settings/reactivate" /> : 
-        <Navigate to="/activate" />;
-    }
+  // If no subscription status exists, redirect to activate
+  if (!subscriptionStatus) {
+    return <Navigate to="/activate" />;
   }
 
+  // If subscription is not active and has history, redirect to reactivate
+  if (!subscriptionStatus.isActive && subscriptionStatus.hasHistory) {
+    console.log('Redirecting to reactivate');
+    return <Navigate to="/settings/reactivate" />;
+  }
+
+  // If subscription is not active and no history, redirect to activate
+  if (!subscriptionStatus.isActive && !subscriptionStatus.hasHistory) {
+    return <Navigate to="/activate" />;
+  }
+
+  // If subscription is active, allow access to requested page
   return <>{children}</>;
 }; 

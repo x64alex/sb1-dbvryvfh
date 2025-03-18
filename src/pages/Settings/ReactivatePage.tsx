@@ -54,39 +54,6 @@ export const ReactivatePage = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
   const [previousPlan, setPreviousPlan] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      try {
-        const subscription = await subscriptionApi.getSubscription();
-        
-        // If subscription is active, redirect to subscription page
-        if (subscription?.subscription?.is_active) {
-          navigate('/settings/subscription');
-          return;
-        }
-
-        // Check if user had a previous subscription
-        const category = subscription?.subscription?.subscription?.sku?.category?.toLowerCase();
-        if (category) {
-          setPreviousPlan(category);
-          setSelectedPlan(category);
-        } else {
-          // If no previous subscription, redirect to activation page
-          navigate('/activate');
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        toast.error('Failed to load subscription details');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [navigate]);
 
   const handleContinue = () => {
     const plan = plans.find(p => p.id === selectedPlan);
@@ -104,14 +71,6 @@ export const ReactivatePage = () => {
       maximumFractionDigits: 2
     }).format(price);
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">

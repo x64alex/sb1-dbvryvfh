@@ -26,11 +26,11 @@ export const useAuth = () => {
       const subscription = await subscriptionApi.getSubscription();
       
       // Check if user has any subscription history
-      const hasSubscriptionHistory = subscription?.subscription?.subscription?.sku?.category && 
-        subscription.subscription.subscription.sku.category !== 'Basic';
+      const hasSubscriptionHistory = subscription?.category && 
+        subscription.category !== 'Basic';
 
       return {
-        isActive: subscription?.subscription?.is_active || false,
+        isActive: subscription?.is_active || false,
         hasHistory: hasSubscriptionHistory
       };
     } catch (error) {
@@ -50,7 +50,6 @@ export const useAuth = () => {
       
       if (storedToken && storedUser) {
         setAuthToken(storedToken);
-        const { isActive, hasHistory } = await checkSubscriptionStatus();
         
         setState({
           isAuthenticated: true,
@@ -58,18 +57,6 @@ export const useAuth = () => {
           token: storedToken,
           user: JSON.parse(storedUser)
         });
-        
-        // Only redirect if we're on the login, signup, or activation pages
-        const isAuthPage = ['/login', '/signup', '/activate'].includes(window.location.pathname);
-        if (isAuthPage) {
-          if (isActive) {
-            navigate('/settings/subscription');
-          } else if (hasHistory) {
-            navigate('/settings/reactivate');
-          } else {
-            navigate('/activate');
-          }
-        }
       } else {
         setState(prev => ({ ...prev, isLoading: false }));
       }
@@ -93,15 +80,15 @@ export const useAuth = () => {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       // Check subscription status after successful auth
-      const { isActive, hasHistory } = await checkSubscriptionStatus();
+      navigate('/settings/subscription');
       
-      if (isActive) {
-        navigate('/settings/subscription');
-      } else if (hasHistory) {
-        navigate('/settings/reactivate');
-      } else {
-        navigate('/activate');
-      }
+      // if (isActive) {
+      //   navigate('/settings/subscription');
+      // } else if (hasHistory) {
+      //   navigate('/settings/reactivate');
+      // } else {
+      //   navigate('/activate');
+      // }
     }
   }, [navigate]);
 
