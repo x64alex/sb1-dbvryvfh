@@ -56,10 +56,27 @@ export const useAuth = () => {
       
       setState(newState);
       setAuthToken(response.token);
+      console.log('1');
       localStorage.setItem('token', response.token);
+      console.log('2');
       localStorage.setItem('user', JSON.stringify(response.user));
-      navigate('/settings/subscription');
+      console.log('3');
+      console.log('start subscription useauth hook');
 
+      try {
+        const subscription = await subscriptionApi.getSubscription();
+        console.log('subscription useauth hook', subscription);
+        if (subscription?.is_active) {
+          navigate('/settings/subscription');
+        } else if (subscription?.next_renewal) {
+          navigate('/settings/reactivate');
+        } else {
+          navigate('/activate');
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        navigate('/settings/subscription');
+      }
     }
   }, [navigate]);
 
