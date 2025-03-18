@@ -52,8 +52,6 @@ export const ActivationPage = () => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
-  const [isLoading, setIsLoading] = useState(true);
-
 
   const handleContinue = () => {
     const plan = plans.find(p => p.id === selectedPlan);
@@ -72,14 +70,6 @@ export const ActivationPage = () => {
       maximumFractionDigits: 2
     }).format(price);
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
