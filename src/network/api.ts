@@ -24,6 +24,8 @@ export interface AuthResponse {
     user?: {
         phoneNumber: string;
         email: string;
+        hasSubscription: boolean;
+        activeSubscription: SubscriptionResponse | null;
     };
 }
 

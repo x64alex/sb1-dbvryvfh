@@ -506,164 +506,159 @@ app.post('/api/resend-code', async (req, res) => {
     }
 });
 
-// Sign-up endpoint
-app.post('/api/signup', async (req, res) => {
-    try {
-        const { email, phoneNumber } = req.body;
+// Signup endpoint
+app.post('/api/signup', (req, res) => {
+    const { email, phoneNumber } = req.body;
 
-        if (!email || !phoneNumber) {
-            return res.status(400).json({ message: 'Email and phone number are required' });
-        }
-
-        if (!isValidEmail(email)) {
-            return res.status(400).json({ message: 'Invalid email format' });
-        }
-
-        if (!isValidPhoneNumber(phoneNumber)) {
-            return res.status(400).json({ message: 'Invalid phone number format. Use international format (e.g., +1234567890)' });
-        }
-
-        if (Array.from(users.values()).some(user => user.phoneNumber === phoneNumber)) {
-            return res.status(400).json({ message: 'Phone number already registered' });
-        }
-
-        if (Array.from(users.values()).some(user => user.email === email)) {
-            return res.status(400).json({ message: 'Email already registered' });
-        }
-
-        // Store user data temporarily
-        const tempUserData = {
-            email,
-            phoneNumber,
-            verified: false
-        };
-        users.set(phoneNumber, tempUserData);
-
-        // Send verification code
-        sendVerificationCode(phoneNumber, 'signup');
-
-        res.status(201).json({ 
-            message: 'Verification code sent to your phone number',
-            phoneNumber
+    if (!isValidPhoneNumber(phoneNumber)) {
+        return res.status(400).json({ 
+            message: 'Invalid phone number format',
+            phoneNumber: phoneNumber
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Error during signup' });
     }
+
+    if (!isValidEmail(email)) {
+        return res.status(400).json({ 
+            message: 'Invalid email format',
+            phoneNumber: phoneNumber
+        });
+    }
+
+    if (users.has(phoneNumber)) {
+        return res.status(400).json({ 
+            message: 'User already exists',
+            phoneNumber: phoneNumber
+        });
+    }
+
+    // Store user data
+    users.set(phoneNumber, {
+        email,
+        phoneNumber,
+        verified: false
+    });
+
+    // Send verification code
+    sendVerificationCode(phoneNumber, 'signup');
+
+    res.json({ 
+        message: 'Verification code sent',
+        phoneNumber: phoneNumber
+    });
 });
 
-// Verify signup code endpoint
-app.post('/api/verify-signup', async (req, res) => {
-    try {
-        const { phoneNumber, code } = req.body;
+// Verify signup endpoint
+app.post('/api/verify-signup', (req, res) => {
+    const { phoneNumber, code } = req.body;
 
-        const storedVerification = verificationCodes.get(phoneNumber);
-        const user = users.get(phoneNumber);
-
-        if (!storedVerification || !user) {
-            return res.status(400).json({ message: 'Invalid verification attempt' });
-        }
-
-        if (storedVerification.type !== 'signup') {
-            return res.status(400).json({ message: 'Invalid verification type' });
-        }
-
-        if (Date.now() - storedVerification.timestamp > VERIFICATION_EXPIRY) {
-            verificationCodes.delete(phoneNumber);
-            return res.status(400).json({ message: 'Verification code expired' });
-        }
-
-        if (storedVerification.code !== code) {
-            return res.status(400).json({ message: 'Invalid verification code' });
-        }
-
-        // Update user as verified
-        user.verified = true;
-        users.set(phoneNumber, user);
-        verificationCodes.delete(phoneNumber);
-
-        // Generate JWT token
-        const token = jwt.sign({ phoneNumber }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '1h' });
-
-        res.json({
-            message: 'Signup successful',
-            token,
-            user: {
-                phoneNumber: user.phoneNumber,
-                email: user.email
-            }
+    const verificationData = verificationCodes.get(phoneNumber);
+    if (!verificationData || verificationData.code !== code || verificationData.type !== 'signup') {
+        return res.status(400).json({ 
+            message: 'Invalid verification code',
+            phoneNumber: phoneNumber
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Error during verification' });
     }
+
+    const user = users.get(phoneNumber);
+    if (!user) {
+        return res.status(404).json({ 
+            message: 'User not found',
+            phoneNumber: phoneNumber
+        });
+    }
+
+    // Mark user as verified
+    user.verified = true;
+
+    // Generate JWT token
+    const token = jwt.sign({ phoneNumber }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+
+    // Return auth response with no subscription
+    res.json({
+        message: 'Signup successful',
+        token,
+        phoneNumber,
+        user: {
+            phoneNumber: user.phoneNumber,
+            email: user.email,
+            hasSubscription: false,
+            activeSubscription: null
+        }
+    });
+
+    // Clear verification code
+    verificationCodes.delete(phoneNumber);
 });
 
-// Login endpoint (initiates 2FA)
-app.post('/api/login', async (req, res) => {
-    try {
-        const { phoneNumber } = req.body;
+// Login endpoint
+app.post('/api/login', (req, res) => {
+    const { phoneNumber } = req.body;
 
-        if (!phoneNumber) {
-            return res.status(400).json({ message: 'Phone number is required' });
-        }
-
-        const user = users.get(phoneNumber);
-        if (!user || !user.verified) {
-            return res.status(401).json({ message: 'Invalid phone number or user not verified' });
-        }
-
-        // Send verification code
-        sendVerificationCode(phoneNumber, 'login');
-
-        res.json({
-            message: 'Verification code sent to your phone number',
-            phoneNumber
+    if (!isValidPhoneNumber(phoneNumber)) {
+        return res.status(400).json({ 
+            message: 'Invalid phone number format',
+            phoneNumber: phoneNumber
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Error during login' });
     }
+
+    const user = users.get(phoneNumber);
+    if (!user) {
+        return res.status(404).json({ 
+            message: 'User not found',
+            phoneNumber: phoneNumber
+        });
+    }
+
+    // Send verification code
+    sendVerificationCode(phoneNumber, 'login');
+
+    res.json({ 
+        message: 'Verification code sent',
+        phoneNumber: phoneNumber
+    });
 });
 
-// Verify login code endpoint (complete 2FA)
-app.post('/api/verify-login', async (req, res) => {
-    try {
-        const { phoneNumber, code } = req.body;
+// Verify login endpoint
+app.post('/api/verify-login', (req, res) => {
+    const { phoneNumber, code } = req.body;
 
-        const storedVerification = verificationCodes.get(phoneNumber);
-        const user = users.get(phoneNumber);
-
-        if (!storedVerification || !user) {
-            return res.status(400).json({ message: 'Invalid verification attempt' });
-        }
-
-        if (storedVerification.type !== 'login') {
-            return res.status(400).json({ message: 'Invalid verification type' });
-        }
-
-        if (Date.now() - storedVerification.timestamp > VERIFICATION_EXPIRY) {
-            verificationCodes.delete(phoneNumber);
-            return res.status(400).json({ message: 'Verification code expired' });
-        }
-
-        if (storedVerification.code !== code) {
-            return res.status(400).json({ message: 'Invalid verification code' });
-        }
-
-        verificationCodes.delete(phoneNumber);
-
-        // Generate JWT token
-        const token = jwt.sign({ phoneNumber }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '1h' });
-
-        res.json({
-            message: 'Login successful',
-            token,
-            user: {
-                phoneNumber: user.phoneNumber,
-                email: user.email
-            }
+    const verificationData = verificationCodes.get(phoneNumber);
+    if (!verificationData || verificationData.code !== code || verificationData.type !== 'login') {
+        return res.status(400).json({ 
+            message: 'Invalid verification code',
+            phoneNumber: phoneNumber
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Error during verification' });
     }
+
+    const user = users.get(phoneNumber);
+    if (!user) {
+        return res.status(404).json({ 
+            message: 'User not found',
+            phoneNumber: phoneNumber
+        });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ phoneNumber }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+
+    // Get subscription data
+    const subscription = subscriptions.get(phoneNumber);
+
+    // Return auth response
+    res.json({
+        message: 'Login successful',
+        token,
+        phoneNumber,
+        user: {
+            phoneNumber: user.phoneNumber,
+            email: user.email,
+            hasSubscription: !!subscription,
+            activeSubscription: subscription || null
+        }
+    });
+
+    // Clear verification code
+    verificationCodes.delete(phoneNumber);
 });
 
 // Middleware to authenticate JWT token

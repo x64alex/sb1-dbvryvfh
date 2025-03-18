@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse, subscriptionApi } from '../network/api';
+import { authApi, setAuthToken, clearAuthToken, SignupRequest, VerifyCodeRequest, AuthResponse, SubscriptionResponse } from '../network/api';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -8,6 +8,8 @@ interface AuthState {
   user: {
     phoneNumber: string;
     email: string;
+    hasSubscription: boolean;
+    activeSubscription: SubscriptionResponse | null;
   } | null;
   token: string | null;
 }
@@ -23,58 +25,42 @@ export const useAuth = () => {
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const initializeAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      if (storedToken && storedUser) {
-        setAuthToken(storedToken);
-        
-        setState({
-          isAuthenticated: true,
-          isLoading: false,
-          token: storedToken,
-          user: JSON.parse(storedUser)
-        });
-      } else {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    };
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      setAuthToken(storedToken);
+      const parsedUser = JSON.parse(storedUser);
+      setState({
+        isAuthenticated: true,
+        isLoading: false,
+        token: storedToken,
+        user: parsedUser
+      });
+    } else {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []);
 
-    initializeAuth();
-  }, [navigate]);
-
-  const handleAuthSuccess = useCallback(async (response: AuthResponse) => {
+  const handleAuthSuccess = useCallback((response: AuthResponse) => {
     if (response.token && response.user) {
-      console.log('handleAuthSuccess');
-      const newState = {
+      setState({
         isAuthenticated: true,
         isLoading: false,
         token: response.token,
         user: response.user
-      };
+      });
       
-      setState(newState);
       setAuthToken(response.token);
-      console.log('1');
       localStorage.setItem('token', response.token);
-      console.log('2');
       localStorage.setItem('user', JSON.stringify(response.user));
-      console.log('3');
-      console.log('start subscription useauth hook');
-
-      try {
-        const subscription = await subscriptionApi.getSubscription();
-        console.log('subscription useauth hook', subscription);
-        if (subscription?.is_active) {
-          navigate('/settings/subscription');
-        } else if (subscription?.next_renewal) {
-          navigate('/settings/reactivate');
-        } else {
-          navigate('/activate');
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
+      
+      // Navigate based on subscription status
+      if (!response.user.hasSubscription) {
+        navigate('/activate');
+      } else if (!response.user.activeSubscription?.is_active && response.user.activeSubscription?.next_renewal) {
+        navigate('/settings/reactivate');
+      } else {
         navigate('/settings/subscription');
       }
     }
@@ -83,8 +69,7 @@ export const useAuth = () => {
   const signup = useCallback(async (data: SignupRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const response = await authApi.signup(data);
-      return response;
+      return await authApi.signup(data);
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
@@ -94,7 +79,7 @@ export const useAuth = () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await authApi.verifySignup(data);
-      await handleAuthSuccess(response);
+      handleAuthSuccess(response);
       return response;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -104,8 +89,7 @@ export const useAuth = () => {
   const login = useCallback(async (phoneNumber: string) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const response = await authApi.login(phoneNumber);
-      return response;
+      return await authApi.login(phoneNumber);
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
@@ -115,7 +99,7 @@ export const useAuth = () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await authApi.verifyLogin(data);
-      await handleAuthSuccess(response);
+      handleAuthSuccess(response);
       return response;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));

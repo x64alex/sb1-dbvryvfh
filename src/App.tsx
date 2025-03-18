@@ -16,14 +16,13 @@ import { CancelPlan } from './pages/Settings/CancelPlan';
 import { CancelConfirmation } from './pages/Settings/CancelConfirmation';
 import { CountryBanner } from './components/CountryBanner';
 import { useCountry } from './hooks/useCountry';
-import { AuthProvider, ProtectedRoute } from './contexts/auth';
+import { ProtectedRouteWrapper } from './components/ProtectedRouteWrapper';
 
 function App() {
   const { isUS, loading } = useCountry();
 
   return (
     <Router>
-      <AuthProvider>
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
         {!loading && !isUS && <CountryBanner />}
         <Header />
@@ -32,72 +31,62 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route 
-              path="/activate" 
-              element={
-                  <ActivationPage />
-              } 
-            />
-            <Route 
-              path="/settings/reactivate" 
-              element={
-                <ReactivatePage />
-              } 
-            />
+            <Route path="/activate" element={<ActivationPage />} />
+            <Route path="/settings/reactivate" element={<ReactivatePage />} />
             <Route 
               path="/settings/subscription" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <Subscription />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/payment-methods" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <PaymentMethods />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/transactions" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <PaymentHistory />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/change-plan" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <ChangePlan />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/change-plan/:planId" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <ConfirmPlan />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/cancel" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <CancelPlan />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
             <Route 
               path="/settings/cancel-confirmation" 
               element={
-                <ProtectedRoute>
+                <ProtectedRouteWrapper>
                   <CancelConfirmation />
-                </ProtectedRoute>
+                </ProtectedRouteWrapper>
               } 
             />
           </Routes>
@@ -105,7 +94,6 @@ function App() {
         <Footer />
         <Toaster position="top-center" />
       </div>
-      </AuthProvider>
     </Router>
   );
 }
