@@ -21,6 +21,7 @@ interface AuthContextType extends AuthState {
   login: (phoneNumber: string) => Promise<AuthResponse>;
   verifyLogin: (data: VerifyCodeRequest) => Promise<AuthResponse>;
   logout: () => void;
+  updateUser: (user: AuthState['user']) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,6 +75,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, [navigate]);
+
+  const updateUser = useCallback((user: AuthState['user']) => {
+    setState(prev => ({
+      ...prev,
+      user
+    }));
+    localStorage.setItem('user', JSON.stringify(user));
+  }, []);
 
   const signup = async (data: SignupRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
@@ -129,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, signup, verifySignup, login, verifyLogin, logout }}>
+    <AuthContext.Provider value={{ ...state, signup, verifySignup, login, verifyLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -142,4 +151,4 @@ export const useAuth = () => {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}; 
+};

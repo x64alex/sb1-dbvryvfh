@@ -90,6 +90,7 @@ subscriptions.set('+10987654321', {
   price: '4.95'
 });
 
+// Plan data structures
 const planFeatures = {
   basic: [
     { title: 'Unmask blocked calls', included: true },
@@ -227,16 +228,51 @@ app.get('/api/subscription', authenticateToken, (req, res) => {
     }
 });
 
+// Get transactions endpoint
+app.get('/api/transactions', authenticateToken, (req, res) => {
+    try {
+        const userTransactions = Array.from(transactions.values());
+        res.json(userTransactions);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching transactions' });
+    }
+});
+
 // Create Setup Intent endpoint
 app.post('/api/setup-intent', authenticateToken, async (req, res) => {
     try {
+        const { phoneNumber } = req.user;
+        const user = users.get(phoneNumber);
+        
+        if (!user) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        // Create or retrieve Stripe customer
+        let customer;
+        if (!user.stripeCustomerId) {
+            customer = await stripe.customers.create({
+                email: user.email,
+                phone: phoneNumber
+            });
+            
+            // Save customer ID to user
+            user.stripeCustomerId = customer.id;
+            users.set(phoneNumber, user);
+        } else {
+            customer = await stripe.customers.retrieve(user.stripeCustomerId);
+        }
+
+        // Create Setup Intent
         const setupIntent = await stripe.setupIntents.create({
+            customer: customer.id,
             payment_method_types: ['card'],
-            usage: 'off_session',
+            usage: 'off_session'
         });
 
         res.json({
-            clientSecret: setupIntent.client_secret
+            clientSecret: setupIntent.client_secret,
+            customerId: customer.id
         });
     } catch (error) {
         console.error('Error creating setup intent:', error);
@@ -382,7 +418,7 @@ app.get('/api/plans/:planId/pricing', authenticateToken, (req, res) => {
 });
 
 // Change plan endpoint
-app.post('/api/change-plan', authenticateToken, (req, res) => {
+app.post('/api/change-plan', authenticateToken, async (req, res) => {
     try {
         const { planId, duration } = req.body;
         const { phoneNumber } = req.user;
@@ -414,10 +450,21 @@ app.post('/api/change-plan', authenticateToken, (req, res) => {
 
         // Update subscription
         const subscription = {
-            planId,
-            duration,
-            startDate: new Date(),
-            nextBillingDate
+            is_active: true,
+            category: planId.charAt(0).toUpperCase() + planId.slice(1),
+            variation: duration,
+            next_renewal: {
+                unixtime: Math.floor(nextBillingDate.getTime() / 1000)
+            },
+            userFeatures: {
+                unmasking: true,
+                blacklist: true,
+                missed_call_alerts: planId !== 'basic',
+                cnam: planId !== 'basic',
+                transcriptions: planId === 'ultimate',
+                recording: planId === 'ultimate'
+            },
+            price: planPricing[planId][duration].toString()
         };
 
         subscriptions.set(phoneNumber, subscription);
@@ -439,7 +486,7 @@ app.get('/api/plans', authenticateToken, (req, res) => {
         
         const plansWithCurrentFlag = plans.map(plan => ({
             ...plan,
-            current: subscription ? plan.id === subscription.planId : plan.id === 'basic'
+            current: subscription ? plan.id === subscription.category.toLowerCase() : plan.id === 'basic'
         }));
         
         res.json(plansWithCurrentFlag);
@@ -455,16 +502,6 @@ app.get('/api/payment-methods', authenticateToken, (req, res) => {
         res.json(userCards);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching payment methods' });
-    }
-});
-
-// Get transactions endpoint
-app.get('/api/transactions', authenticateToken, (req, res) => {
-    try {
-        const userTransactions = Array.from(transactions.values());
-        res.json(userTransactions);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching transactions' });
     }
 });
 

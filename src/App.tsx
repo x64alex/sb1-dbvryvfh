@@ -6,6 +6,7 @@ import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { ActivationPage } from './pages/ActivationPage';
+import { AddPaymentMethod } from './pages/AddPaymentMethod';
 import { ReactivatePage } from './pages/Settings/ReactivatePage';
 import { Subscription } from './pages/Settings/Subscription';
 import { PaymentMethods } from './pages/Settings/PaymentMethods';
@@ -34,6 +35,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/activate" element={<ActivationPage />} />
+              <Route path="/add-payment-method" element={<AddPaymentMethod />} />
               <Route path="/settings/reactivate" element={<ReactivatePage />} />
               <Route 
                 path="/settings/subscription" 
