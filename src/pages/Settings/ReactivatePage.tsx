@@ -53,7 +53,6 @@ export const ReactivatePage = () => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string>('premium');
-  const [previousPlan, setPreviousPlan] = useState<string | null>(null);
 
   const handleContinue = () => {
     const plan = plans.find(p => p.id === selectedPlan);
@@ -88,10 +87,6 @@ export const ReactivatePage = () => {
             <Shield className="h-8 w-8 text-blue-600" />
             <div className="text-left">
               <h2 className="font-semibold text-gray-900">Welcome back!</h2>
-              <p className="text-gray-600">
-                Your previous plan was <span className="font-medium">{previousPlan?.toUpperCase()}</span>.
-                Choose a plan below to reactivate your service.
-              </p>
             </div>
           </div>
 
@@ -128,7 +123,6 @@ export const ReactivatePage = () => {
           {plans.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
             const isSelected = selectedPlan === plan.id;
-            const isPreviousPlan = previousPlan === plan.id;
 
             return (
               <div
@@ -145,11 +139,6 @@ export const ReactivatePage = () => {
                 <div className="p-8">
                   <h3 className="text-xl font-bold text-gray-900 mb-5 flex items-center justify-between">
                     {plan.name}
-                    {isPreviousPlan && (
-                      <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                        Previous Plan
-                      </span>
-                    )}
                   </h3>
                   <div className="mb-5">
                     <div className="flex items-baseline">
