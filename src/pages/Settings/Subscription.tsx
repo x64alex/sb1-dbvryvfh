@@ -102,10 +102,25 @@ export const Subscription = () => {
         return '2 years';
       case 'year':
         return 'year';
+      case 'yearly':
+        return 'year';
       case 'month':
         return 'month';
       default:
         return duration;
+    }
+  };
+
+  const getDurationKey = (duration: string) => {
+    switch (duration) {
+      case 'yearly':
+        return 'year';
+      case 'two_years':
+        return 'two_years';
+      case 'month':
+        return 'month';
+      default:
+        return 'month';
     }
   };
 
@@ -164,8 +179,7 @@ export const Subscription = () => {
 
   const currentPlanId = subscriptionData.category.toLowerCase();
   const upgradeFeatures = getUpgradeFeatures();
-  const currentPricing = pricing[currentPlanId] || {};
-  const duration = subscriptionData.variation || 'month';
+  const duration = getDurationKey(subscriptionData.variation || 'month');
 
   return (
     <div className="min-h-screen bg-gray-50 pt-32 pb-12">
@@ -205,7 +219,7 @@ export const Subscription = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">{formatPrice(currentPricing[duration])}</p>
+              <p className="text-2xl font-bold">{formatPrice(parseFloat(subscriptionData.price))}</p>
               <p className="text-blue-100">per {formatDuration(duration)}</p>
             </div>
           </div>
