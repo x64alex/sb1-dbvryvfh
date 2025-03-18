@@ -147,7 +147,7 @@ export const Subscription = () => {
   const duration = subscriptionData.subscription.subscription.sku.variation;
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <div className="min-h-screen bg-gray-50 pt-32 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="bg-white rounded-t-xl shadow-sm border border-gray-200">

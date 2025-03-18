@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Check, ArrowLeft, Shield } from 'lucide-react';
+import { Check, Shield } from 'lucide-react';
 import { subscriptionApi } from '../network/api';
 import { toast } from 'react-hot-toast';
 
@@ -119,9 +119,6 @@ export const ActivationPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         {/* Header */}
         <div className="flex items-center mb-8">
-          <Link to="/" className="text-gray-500 hover:text-gray-700 mr-4">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
           <h1 className="text-3xl font-bold text-gray-900">
             Select your subscription
           </h1>
